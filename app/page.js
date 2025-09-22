@@ -389,7 +389,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Token Overview */}
+           
             <div className="card">
               <div className="card-header">
                 <h2 className="card-title">
