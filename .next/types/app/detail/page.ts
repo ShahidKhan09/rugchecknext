@@ -1,4 +1,4 @@
-// File: /Users/macbookpro/Documents/next/RugCheckNext/app/detail/page.js
+// File: D:\Quecko Projects\rugcheck\rugchecknext\app\detail\page.js
 import * as entry from '../../../../app/detail/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

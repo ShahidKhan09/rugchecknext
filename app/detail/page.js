@@ -66,6 +66,18 @@ export default function DetailPage() {
     });
   }, []);
 
+  // const decrypted = decryptData(encrypted);
+
+  // const CryptoJS = require("crypto-js");
+
+  // const secretKey = "quecko";
+
+  // const decryptData = (cipherText) => {
+  //   const bytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+  //   const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
+  //   return JSON.parse(decryptedData);
+  // };
+
   return (
     <div className="container">
       {/* Navigation */}
