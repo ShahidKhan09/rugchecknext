@@ -1,281 +1,141 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Line } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import { useSearchParams } from "next/navigation";
+import CryptoJS from "crypto-js";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+// decrypt helper
+const decryptData = (cipherText, secretKey) => {
+  const bytes = CryptoJS.AES.decrypt(cipherText, secretKey);
+  const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
+  return JSON.parse(decryptedData);
+};
+
+// helper for rendering object recursively
+const renderObject = (obj) => {
+  return Object.entries(obj).map(([key, value]) => {
+    if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+      return (
+        <tr key={key}>
+          <td>{key}</td>
+          <td>
+            <table className="nested-table">
+              <tbody>{renderObject(value)}</tbody>
+            </table>
+          </td>
+        </tr>
+      );
+    } else if (Array.isArray(value)) {
+      return (
+        <tr key={key}>
+          <td>{key}</td>
+          <td>
+            {value.map((item, idx) =>
+              typeof item === "object" ? (
+                <table key={idx} className="nested-table">
+                  <tbody>{renderObject(item)}</tbody>
+                </table>
+              ) : (
+                <div key={idx}>{item.toString()}</div>
+              )
+            )}
+          </td>
+        </tr>
+      );
+    } else {
+      return (
+        <tr key={key}>
+          <td>{key}</td>
+          <td>{value?.toString()}</td>
+        </tr>
+      );
+    }
+  });
+};
 
 export default function DetailPage() {
-  const [chartData, setChartData] = useState(null);
+  const searchParams = useSearchParams();
+  const address = searchParams.get("address");
 
+  const [tokenData, setTokenData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // fetch token data from API
   useEffect(() => {
-    // Generate sample price data
-    let value = 0.000045;
-    const data = [];
-    for (let i = 0; i < 24; i++) {
-      value += (Math.random() - 0.5) * 0.000002;
-      data.push(value);
-    }
+    if (!address) return;
 
-    setChartData({
-      labels: [
-        "12:00",
-        "13:00",
-        "14:00",
-        "15:00",
-        "16:00",
-        "17:00",
-        "18:00",
-        "19:00",
-        "20:00",
-        "21:00",
-        "22:00",
-        "23:00",
-      ],
-      datasets: [
-        {
-          label: "RYAN Price",
-          data,
-          borderColor: "#6366f1",
-          backgroundColor: "rgba(99, 102, 241, 0.1)",
-          tension: 0.4,
-          fill: true,
-          pointBackgroundColor: "#6366f1",
-          pointRadius: 0,
-          pointHoverRadius: 5,
-        },
-      ],
-    });
-  }, []);
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `https://be-git-main-shahids-projects-091bca0f.vercel.app/airdrops/byAddress?address=${address}`
+        );
+        const result = await res.json();
 
-  // const decrypted = decryptData(encrypted);
+        if (result?.statusCode === 200 && result?.data) {
+          const secretKey = "quecko";
+          const decrypted = decryptData(result.data, secretKey);
+          setTokenData(decrypted);
+        } else {
+          console.error("Unexpected API response:", result);
+        }
+      } catch (err) {
+        console.error("Error fetching token detail:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // const CryptoJS = require("crypto-js");
+    fetchData();
+  }, [address]);
 
-  // const secretKey = "quecko";
-
-  // const decryptData = (cipherText) => {
-  //   const bytes = CryptoJS.AES.decrypt(cipherText, secretKey);
-  //   const decryptedData = bytes.toString(CryptoJS.enc.Utf8);
-  //   return JSON.parse(decryptedData);
-  // };
+  if (loading) {
+    return (
+      <div className="container">
+        <p>Loading token data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container">
-      {/* Navigation */}
-
-      {/* Header */}
-      <div className="token-header">
-        <h1 className="token-title">
-          RYAN <span className="token-price">$0.000046</span>
-        </h1>
-        <div className="chart-info">
-          <span>RYAN © / WENIB</span>
-          <span>•</span>
-          <span>BSC &gt; PancakeSwap v2</span>
-        </div>
-      </div>
-
-      {/* Chart */}
+      {/* DexScreener Chart (always render with query param address) */}
       <div className="chart-section">
-        <div className="chart-header">
-          <h2 className="chart-title">Price Chart</h2>
-          <div className="token-tabs">
-            <div className="tab active">1D</div>
-            <div className="tab">1W</div>
-            <div className="tab">1M</div>
-            <div className="tab">3M</div>
-          </div>
-        </div>
-        <div className="chart-container">
-          {chartData && (
-            <Line
-              data={chartData}
-              options={{
-                plugins: { legend: { display: false } },
-                scales: {
-                  y: {
-                    ticks: {
-                      callback: (value) => `$${value.toFixed(6)}`,
-                    },
-                  },
-                },
-              }}
-            />
-          )}
-        </div>
+        <h2 className="chart-title">Live Chart</h2>
+        <iframe
+          src={`https://dexscreener.com/solana/${address}?embed=1&theme=dark`}
+          style={{
+            width: "100%",
+            height: "750px",
+            border: "none",
+            borderRadius: "12px",
+          }}
+        ></iframe>
       </div>
-
-      {/* Info Grid */}
-      <div className="info-grid">
-        {/* Description */}
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">The Original not $B</h2>
+      {/* Header */}
+      {tokenData ? (
+        <div className="token-header">
+          <h1 className="token-title">
+            {tokenData.baseToken?.name}{" "}
+            <span className="token-price">{tokenData.baseToken?.symbol}</span>
+          </h1>
+          <div className="chart-info">
+            <span>Address: {tokenData.baseToken?.address}</span>
           </div>
-          <p className="token-description">
-            Meet Ryan. Looks like a lion, roars like a soft kitten. The original
-            lion token, $RYAN was created in 2024.
-          </p>
-          <div className="token-tabs">
-            <div className="tab active">Info</div>
-            <div className="tab">Chart+Tons</div>
-            <div className="tab">Chart</div>
-            <div className="tab">Tons</div>
-          </div>
-          <p>
-            <em>Trocked by</em>
-          </p>
         </div>
+      ) : (
+        <p>No data found for this token.</p>
+      )}
 
-        {/* Token Info */}
+      {/* Token Info */}
+      {tokenData && (
         <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <i className="fas fa-info-circle"></i> Token Information
-            </h2>
-          </div>
+          <h2 className="card-title">All Token Data</h2>
           <table className="info-table">
-            <tbody>
-              <tr>
-                <td className="info-label">Market Cap</td>
-                <td>$46,168.00</td>
-              </tr>
-              <tr>
-                <td className="info-label">FDV</td>
-                <td>$46,168.00</td>
-              </tr>
-              <tr>
-                <td className="info-label">24h Volume</td>
-                <td>$1.04</td>
-              </tr>
-              <tr>
-                <td className="info-label">Liquidity</td>
-                <td>$31,485.35</td>
-              </tr>
-              <tr>
-                <td className="info-label">Total Tons</td>
-                <td>4</td>
-              </tr>
-              <tr>
-                <td className="info-label">Created</td>
-                <td>May 22, 2025</td>
-              </tr>
-            </tbody>
+            <tbody>{renderObject(tokenData)}</tbody>
           </table>
         </div>
-      </div>
-
-      <div className="info-grid">
-        {/* Price Stats */}
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <i className="fas fa-chart-line"></i> Price Stats
-            </h2>
-          </div>
-          <table className="info-table">
-            <tbody>
-              <tr>
-                <td className="info-label">24h High</td>
-                <td>$0.000047</td>
-              </tr>
-              <tr>
-                <td className="info-label">24h Low</td>
-                <td>$0.000046</td>
-              </tr>
-              <tr>
-                <td className="info-label">All-Time High</td>
-                <td>$0.000047</td>
-              </tr>
-              <tr>
-                <td className="info-label">All-Time Low</td>
-                <td>$0.000023</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Trading Pairs */}
-        <div className="card">
-          <div className="card-header">
-            <h2 className="card-title">
-              <i className="fas fa-exchange-alt"></i> Trading Pairs
-            </h2>
-          </div>
-
-          <div className="trading-pair">
-            <div className="pair-info">
-              <div className="pair-icon">P</div>
-              <div className="pair-details">
-                <div className="pair-name">RYAN/BNB</div>
-                <div className="pair-protocol">pancakeswap</div>
-              </div>
-            </div>
-            <div className="pair-price">
-              <div className="price-value">$0.000046</div>
-              <div className="price-change">-0.87%</div>
-            </div>
-            <button className="trade-btn">Trade</button>
-          </div>
-
-          <div className="trading-pair">
-            <div className="pair-info">
-              <div className="pair-icon">P</div>
-              <div className="pair-details">
-                <div className="pair-name">RYAN/WENIB</div>
-                <div className="pair-protocol">pancakeswap</div>
-              </div>
-            </div>
-            <div className="pair-price">
-              <div className="price-value">$0.000045</div>
-              <div className="price-change">-3.59%</div>
-            </div>
-            <button className="trade-btn">Trade</button>
-          </div>
-        </div>
-      </div>
-
-      {/* Links */}
-      <div className="card">
-        <div className="card-header">
-          <h2 className="card-title">
-            <i className="fas fa-link"></i> Links
-          </h2>
-        </div>
-        <div className="links-grid">
-          <div className="link-item">
-            <i className="fas fa-globe"></i> <span>Website</span>
-          </div>
-          <div className="link-item">
-            <i className="fab fa-twitter"></i> <span>Twitter</span>
-          </div>
-          <div className="link-item">
-            <i className="fab fa-telegram"></i> <span>Telegram</span>
-          </div>
-          <div className="link-item">
-            <i className="fab fa-discord"></i> <span>Discord</span>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
