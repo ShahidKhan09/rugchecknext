@@ -11,7 +11,13 @@ export default function RootLayout({ children }) {
       <body>
         <nav className="navbar">
           <div className="nav-container">
-            <div className="logo">RugCheck</div>
+            <a
+              href="/explore"
+              className="logo"
+              style={{ cursor: "pointer", textDecoration: "none" }}
+            >
+              RugCheck
+            </a>{" "}
             <div className="nav-links">
               <a href="/" className="nav-link">
                 Home
